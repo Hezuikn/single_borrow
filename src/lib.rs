@@ -1,68 +1,34 @@
 #![allow(incomplete_features)]
+#![feature(type_name_of_val)]
 #![feature(specialization)]
-#![feature(negative_impls, auto_traits)]
-#![feature(with_negative_coherence)]
-#![feature(core_panic)]
-//#![feature(rustc_attrs)]
+#![feature(inline_const, const_type_name)]
 
-use core::panicking::panic_str;
-
-auto trait Owned {}
-impl<T> !Owned for &T {}
-
-//doesnt need the attr and i have no idea what it does
-//checks if with_negative_coherence is on in root crate
-//#[rustc_strict_coherence]
-pub trait Reduce<'a> {
-    type OwnedVariant;
-    fn reduce(self) -> &'a Self::OwnedVariant;
+//downstream
+pub trait SingleBorrow<'a> {
+    type Less;
+    fn single_borrow(self) -> &'a Self::Less;
 }
 
-macros::impl_reduce!();
-
-pub trait Fake<'a> {
-    type F: Reduce<'a>;
-    const ASSERT: ();
-    fn fake(self) -> Option<Self::F>;
-}
-
-#[allow(non_camel_case_types)]
-pub struct not_the_actual_type;
-
-impl<'a, T> Fake<'a> for T {
-    default const ASSERT: () = panic_str("too many borrows");
-    default type F = &'a not_the_actual_type;
+impl<'a, T> SingleBorrow<'a> for &'a T {
+    default type Less = T;
     #[inline]
-    default fn fake(self) -> Option<Self::F> {
-        None
+    default fn single_borrow(self) -> &'a Self::Less {
+        unsafe { transmate(self) }
     }
 }
 
-impl<'a, T: Reduce<'a>> Fake<'a> for T {
-    const ASSERT: () = ();
-    type F = T;
+impl<'a, T> SingleBorrow<'a> for &'a & T {
+    type Less = <&'a T as SingleBorrow<'a>>::Less;
     #[inline]
-    fn fake(self) -> Option<Self::F> {
-        Some(self)
+    fn single_borrow(self) -> &'a Self::Less {
+        SingleBorrow::single_borrow(*self)
     }
 }
 
 #[inline]
-pub fn try_single_borrow<T: ?Sized>(
-    t: &T,
-) -> Option<&<<&T as Fake<'_>>::F as Reduce<'_>>::OwnedVariant> {
-    if let Some(x) = Fake::fake(t) {
-        return Some(x.reduce());
-    } else {
-        None
-    }
-}
-
-#[inline]
-pub fn single_borrow<T: ?Sized>(t: &T) -> &<<&T as Fake<'_>>::F as Reduce<'_>>::OwnedVariant {
-    #[allow(path_statements)]
-    {
-        <&T>::ASSERT;
-    }
-    try_single_borrow(t).expect("static assertion broke")
+const unsafe fn transmate<T, U>(t: &T) -> &U {
+    const {
+        [()][!konst::string::eq_str(std::any::type_name::<T>(), std::any::type_name::<U>()) as usize];
+    };
+    return std::mem::transmute(t);
 }
