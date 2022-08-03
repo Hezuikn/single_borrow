@@ -7,7 +7,8 @@ fn main() {
     dbg!(type_name_of_val(&t));
     let t = t.single_borrow();
     dbg!(type_name_of_val(&t));
-    dbg!(t);
+    //broke
+    //dbg!(t);
 }
 
 use std::any::type_name_of_val;
