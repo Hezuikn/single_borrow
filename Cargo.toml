@@ -2,6 +2,3 @@
 name = "single_borrow"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-konst = "0.2.15"
