@@ -1,5 +1,4 @@
 #![allow(incomplete_features)]
-#![feature(type_name_of_val)]
 #![feature(specialization)]
 #![feature(inline_const, const_type_name)]
 
@@ -17,11 +16,47 @@ impl<'a, T> SingleBorrow<'a> for &'a T {
     }
 }
 
-impl<'a, T> SingleBorrow<'a> for &'a & T {
+impl<'a, T> SingleBorrow<'a> for &'a &T {
     type Less = <&'a T as SingleBorrow<'a>>::Less;
     #[inline]
     fn single_borrow(self) -> &'a Self::Less {
         SingleBorrow::single_borrow(*self)
+    }
+}
+
+//
+
+impl<'a, T> SingleBorrow<'a> for &'a mut T {
+    default type Less = T;
+    #[inline]
+    default fn single_borrow(self) -> &'a Self::Less {
+        unsafe { transmate(&*self) }
+    }
+}
+
+impl<'a, T> SingleBorrow<'a> for &'a mut &mut T {
+    type Less = <&'a T as SingleBorrow<'a>>::Less;
+    #[inline]
+    fn single_borrow(self) -> &'a Self::Less {
+        SingleBorrow::single_borrow(&**self)
+    }
+}
+
+//
+
+impl<'a, T> SingleBorrow<'a> for &'a mut &T {
+    type Less = <&'a T as SingleBorrow<'a>>::Less;
+    #[inline]
+    fn single_borrow(self) -> &'a Self::Less {
+        SingleBorrow::single_borrow(&**self)
+    }
+}
+
+impl<'a, T> SingleBorrow<'a> for &'a &mut T {
+    type Less = <&'a T as SingleBorrow<'a>>::Less;
+    #[inline]
+    fn single_borrow(self) -> &'a Self::Less {
+        SingleBorrow::single_borrow(&**self)
     }
 }
 
