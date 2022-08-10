@@ -30,7 +30,7 @@ impl<'a, T> SingleBorrow<'a> for &'a mut T {
     default type Less = T;
     #[inline]
     default fn single_borrow(self) -> &'a Self::Less {
-        unsafe { transmate(&*self) }
+        unsafe { transmate(self) }
     }
 }
 
